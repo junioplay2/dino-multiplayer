@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dino Neon Multiplayer</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Importando o Socket.io do CDN -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen" class="screen-container">
+        <h1 class="title">Dino Race <span class="neon-text">Online</span></h1>
+        
+        <div class="card">
+            <input type="text" id="playerName" placeholder="Seu Nickname" autocomplete="off">
+            
+            <div class="actions">
+                <button id="btnCreate" class="btn primary">Criar Mundo</button>
+                <div class="divider">OU</div>
+                <input type="text" id="roomCodeInput" placeholder="Código do Mundo" autocomplete="off">
+                <button id="btnJoin" class="btn secondary">Entrar em Mundo</button>
+            </div>
+            
+            <p id="statusMessage"></p>
+        </div>
+    </div>
+
+    <!-- TELA DO JOGO (Dividida) -->
+    <div id="game-screen" class="screen-container" style="display: none;">
+        <div class="header">
+            <h2>Sala: <span id="displayRoomCode" class="neon-text"></span></h2>
+            <p id="gameStatus">Aguardando adversário...</p>
+        </div>
+
+        <div class="split-view">
+            <!-- Esquerda: Adversário -->
+            <div class="game-board opponent">
+                <h3 class="player-title">Adversário: <span id="oppName">...</span></h3>
+                <canvas id="oppCanvas" width="400" height="200"></canvas>
+            </div>
+            
+            <!-- Direita: Você -->
+            <div class="game-board you">
+                <h3 class="player-title">Você: <span id="myName">...</span></h3>
+                <canvas id="myCanvas" width="400" height="200"></canvas>
+            </div>
+        </div>
+        
+        <p class="controls">Pressione <strong>ESPAÇO</strong> ou toque na sua tela para pular.</p>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

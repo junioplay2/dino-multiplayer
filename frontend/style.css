@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+
+body {
+    background-color: #0f0c29; /* Cyberpunk dark */
+    background: linear-gradient(to right, #24243e, #302b63, #0f0c29);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.screen-container { width: 100%; max-width: 900px; text-align: center; padding: 20px; }
+
+.title { font-size: 3rem; margin-bottom: 20px; }
+.neon-text { color: #00f2fe; text-shadow: 0 0 10px #00f2fe, 0 0 20px #00f2fe; }
+
+.card {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+input {
+    padding: 12px; border: none; border-radius: 8px; font-size: 1rem;
+    outline: none; background: #2a2a4a; color: white; text-align: center;
+}
+
+.btn {
+    padding: 12px; border: none; border-radius: 8px; font-size: 1rem;
+    font-weight: bold; cursor: pointer; transition: 0.3s;
+}
+.btn.primary { background: #00f2fe; color: #000; box-shadow: 0 0 15px #00f2fe; }
+.btn.primary:hover { background: #4facfe; }
+.btn.secondary { background: #ff0844; color: white; box-shadow: 0 0 15px #ff0844; }
+.btn.secondary:hover { background: #ffb199; color: #000; }
+
+.divider { margin: 10px 0; font-size: 0.9rem; color: #aaa; }
+
+/* Tela Dividida */
+.split-view { display: flex; gap: 20px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+.game-board { background: #1a1a2e; padding: 15px; border-radius: 10px; border: 2px solid #333; }
+.game-board.opponent { border-color: #ff0844; box-shadow: 0 0 15px rgba(255, 8, 68, 0.3); }
+.game-board.you { border-color: #00f2fe; box-shadow: 0 0 15px rgba(0, 242, 254, 0.3); }
+
+canvas { background: #111; border-radius: 5px; width: 100%; max-width: 400px; height: 200px; }
+.player-title { margin-bottom: 10px; font-size: 1.2rem; }
+.controls { margin-top: 20px; font-size: 0.9rem; color: #ccc; }
