@@ -36,23 +36,34 @@ const GRAVITY = 0.6;
 const JUMP_FORCE = -11;
 const SPAWN_X = 580; 
 
+// --- CLASSE DINO ATUALIZADA PARA 2D PIXEL ART ANIMADO ---
 class Dino {
-    constructor(color) {
+    constructor(color, imgSrc) {
         this.x = 60;
         this.y = 0;
-        this.width = 24;
-        this.height = 28;
+        this.width = 40;   // Largura do Dino na tela
+        this.height = 44;  // Altura do Dino na tela
         this.vy = 0;
         this.isJumping = false;
         this.color = color;
         this.isDead = false; 
+
+        // Carrega a folha de sprites pixel art
+        this.img = new Image();
+        this.img.src = imgSrc;
+
+        // Controle de quadros da animação
+        this.animFrame = 0;  // 0: Parado, 1 e 2: Correndo, 3: Morto
+        this.animTimer = 0;  // Temporizador para trocar de marcha das pernas
     }
+    
     jump() {
         if (!this.isJumping && !this.isDead) {
             this.vy = JUMP_FORCE;
             this.isJumping = true;
         }
     }
+    
     update(floorY) {
         this.vy += GRAVITY;
         this.y += this.vy;
@@ -61,13 +72,40 @@ class Dino {
             this.vy = 0;
             this.isJumping = false;
         }
+
+        // --- SISTEMA DE ANIMAÇÃO POR QUADRO ---
+        if (this.isDead) {
+            this.animFrame = 3; // Frame de colisão/derrota
+        } else if (this.isJumping) {
+            this.animFrame = 0; // Frame estático no ar (parado/voando)
+        } else {
+            // Se está correndo no chão, alterna as pernas com base na velocidade do jogo
+            this.animTimer++;
+            if (this.animTimer > (25 / gameSpeed)) { 
+                this.animFrame = this.animFrame === 1 ? 2 : 1;
+                this.animTimer = 0;
+            }
+        }
     }
+    
     draw(ctx) {
-        ctx.fillStyle = this.color;
         ctx.shadowBlur = 8;
         ctx.shadowColor = this.color;
+        
         if (this.isDead) ctx.globalAlpha = 0.4;
-        ctx.fillRect(this.x, this.y - this.height, this.width, this.height);
+
+        // Configuração dos recortes dentro da imagem baixada (cada frame tem 44x47 pixels originais)
+        let spriteWidth = 44;
+        let spriteHeight = 47;
+        let srcX = this.animFrame * spriteWidth;
+
+        // Renderiza o frame correto do pixel art
+        ctx.drawImage(
+            this.img, 
+            srcX, 0, spriteWidth, spriteHeight,         // Onde recortar na imagem original
+            this.x, this.y - this.height, this.width, this.height // Onde desenhar na tela do canvas
+        );
+
         ctx.globalAlpha = 1.0; 
         ctx.shadowBlur = 0;
     }
@@ -91,8 +129,9 @@ class Obstacle {
     }
 }
 
-const myDino = new Dino('#00f2fe');
-const oppDino = new Dino('#ff0844');
+// Instanciação usando os novos arquivos locais baixados
+const myDino = new Dino('#00f2fe', 'dino_cyan.png');
+const oppDino = new Dino('#ff0844', 'dino_magenta.png');
 let backgroundX = 0;
 
 function drawScenery(ctx, floorY) {
@@ -187,11 +226,8 @@ socket.on('opponent_jump', () => {
     if (!isSoloMode) oppDino.jump();
 });
 
-// Processamento unificado de fim de rodada
 socket.on('round_ended', (data) => {
     isGameRunning = false;
-    
-    // Envia a pontuação obtida nessa corrida para verificar se entra nos 5 melhores recordes globais
     socket.emit('submit_score', { name: myName, score: score });
 
     if (data.loserId === socket.id) {
@@ -205,7 +241,6 @@ socket.on('round_ended', (data) => {
     }
     btnRestart.disabled = false;
 
-    // Atualiza o visor interno de confrontos diretos
     const myId = socket.id;
     const opponentId = Object.keys(data.scores).find(id => id !== myId);
     const myWins = data.scores[myId] || 0;
@@ -216,7 +251,6 @@ socket.on('round_ended', (data) => {
 });
 
 socket.on('rematch_offered', () => {
-    // Altera o estado do botão caso o outro player peça revanche primeiro
     btnRestart.innerText = "Aceitar Revanche! ⚔️";
     btnRestart.disabled = false;
 });
@@ -269,7 +303,7 @@ function initGame() {
     obstacles = [];
     gameSpeed = 4.5; 
     obstacleTimer = 0;
-    score = 0; // Zera a pontuação de corrida da rodada
+    score = 0;
 
     myDino.isDead = false;  
     oppDino.isDead = false; 
@@ -297,10 +331,11 @@ document.addEventListener('keydown', (e) => { if (e.code === 'Space') triggerJum
 document.getElementById('btnJump').addEventListener('touchstart', (e) => { e.preventDefault(); triggerJump(); });
 
 function checkCollision(dino, obs, floorY) {
+    // Caixa de colisão levemente reduzida para se ajustar melhor ao formato do Pixel Art (evita mortes injustas)
     return (
-        dino.x < obs.x + obs.width &&
-        dino.x + dino.width > obs.x &&
-        dino.y - dino.height < floorY && 
+        dino.x + 4 < obs.x + obs.width &&
+        dino.x + dino.width - 4 > obs.x &&
+        dino.y - dino.height + 2 < floorY && 
         dino.y >= floorY - obs.height
     );
 }
@@ -318,7 +353,6 @@ btnRestart.addEventListener('click', () => {
         gameScreen.style.display = 'flex';
         setTimeout(initGame, 200);
     } else {
-        // Modo Multiplayer: Processa pedido de Revanche
         btnRestart.innerText = "Aguardando Resposta...";
         btnRestart.disabled = true;
         socket.emit('request_rematch', currentRoom);
@@ -348,8 +382,12 @@ function gameLoop() {
         oppFloor = oppCanvas.height - 35;
     }
 
+    // 🔥 IMPORTANTE PARA PIXEL ART: Desativa a filtragem bilinear que deixa os pixels borrados
+    myCtx.imageSmoothingEnabled = false;
+    if (!isSoloMode) oppCtx.imageSmoothingEnabled = false;
+
     gameSpeed += 0.0016; 
-    score += 0.1; // Pontuação acumulada por sobrevivência (vale para Solo e Multi!)
+    score += 0.1; 
 
     if (isSoloMode) {
         document.getElementById('myName').innerText = Math.floor(score);
@@ -391,7 +429,6 @@ function gameLoop() {
                 socket.emit('submit_score', { name: 'Solo Player', score: score });
                 showEndScreen(`GAME OVER\n${Math.floor(score)} PONTOS`, "neon-magenta");
             } else {
-                // Notifica o servidor e o servidor decide placar e status
                 socket.emit('game_over', currentRoom); 
             }
             return;
