@@ -1,5 +1,5 @@
 // 🚨 COLOQUE A SUA URL DO RENDER AQUI EMBAIXO:
-const socket = io('https://dino-multiplayer.onrender.com'); 
+const socket = io('https://dino-multiplaye.onrender.com'); 
 
 let currentRoom = '';
 let isGameRunning = false;
@@ -43,9 +43,10 @@ class Dino {
         this.vy = 0;
         this.isJumping = false;
         this.color = color;
+        this.isDead = false; // 🔒 Controla se este dino específico está morto
     }
     jump() {
-        if (!this.isJumping) {
+        if (!this.isJumping && !this.isDead) {
             this.vy = JUMP_FORCE;
             this.isJumping = true;
         }
@@ -63,7 +64,12 @@ class Dino {
         ctx.fillStyle = this.color;
         ctx.shadowBlur = 8;
         ctx.shadowColor = this.color;
+        
+        // Se estiver morto, deixa opaco/transparente para dar efeito visual de derrota
+        if (this.isDead) ctx.globalAlpha = 0.4;
+        
         ctx.fillRect(this.x, this.y - this.height, this.width, this.height);
+        ctx.globalAlpha = 1.0; // Reseta opacidade
         ctx.shadowBlur = 0;
     }
 }
@@ -75,7 +81,7 @@ class Obstacle {
         this.height = 26;
     }
     update() {
-        this.x -= gameSpeed;
+        this.x -= gameSpeed; // 🛠️ FIX: Removido o '0' que quebrava o script
     }
     draw(ctx, floorY) {
         ctx.fillStyle = '#ff0055';
@@ -137,7 +143,6 @@ document.getElementById('btnSolo').addEventListener('click', () => {
     isSoloMode = true;
     score = 0;
     
-    // Ativa a trava visual estável de 50%
     splitContainer.classList.add('solo-active'); 
     
     myTagType.innerText = "Pontos:";
@@ -158,7 +163,10 @@ document.getElementById('btnJoin').addEventListener('click', () => {
     splitContainer.classList.remove('solo-active');
     myName = document.getElementById('playerName').value || 'Player 2';
     const code = document.getElementById('roomCodeInput').value.toUpperCase();
-    if (code) socket.emit('join_room', { name: myName, roomCode: code });
+    if (code) {
+        currentRoom = code; // 🚀 FIX: Agora o Player 2 memoriza a sala dele perfeitamente!
+        socket.emit('join_room', { name: myName, roomCode: code });
+    }
 });
 
 socket.on('room_created', (roomCode) => {
@@ -166,6 +174,14 @@ socket.on('room_created', (roomCode) => {
     loginScreen.style.display = 'none';
     waitingScreen.style.display = 'flex';
     displayRoomCode.innerText = roomCode;
+});
+
+// Ouvir quando o oponente morrer
+socket.on('opponent-died', () => {
+    if (oppDino) { // 🛠️ FIX: Alterado de 'opponent' para 'oppDino'
+        oppDino.isDead = true; 
+        console.log("O oponente colidiu e morreu!");
+    }
 });
 
 socket.on('start_game', (players) => {
@@ -191,6 +207,7 @@ socket.on('opponent_jump', () => {
 socket.on('you_win', () => {
     if (isGameRunning && !isSoloMode) {
         isGameRunning = false;
+        oppDino.isDead = true; // Força o congelamento dele na tela
         showEndScreen("VOCÊ VENCEU! 🏆", "neon-cyan");
     }
 });
@@ -200,6 +217,9 @@ function initGame() {
     obstacles = [];
     gameSpeed = 4.5; 
     obstacleTimer = 0;
+
+    myDino.isDead = false;  // Reset de vida
+    oppDino.isDead = false; // Reset de vida
 
     myCanvas.width = myCanvas.clientWidth;
     myCanvas.height = myCanvas.clientHeight;
@@ -286,7 +306,10 @@ function gameLoop() {
     if (!isSoloMode) {
         oppCtx.clearRect(0, 0, oppCanvas.width, oppCanvas.height);
         drawScenery(oppCtx, oppFloor);
-        oppDino.update(oppFloor);
+        
+        if (!oppDino.isDead) { 
+            oppDino.update(oppFloor); // 🔒 Só atualiza a posição e gravidade se estiver vivo!
+        }
         oppDino.draw(oppCtx);
     }
 
@@ -306,13 +329,15 @@ function gameLoop() {
         if (obs.x < myCanvas.width) obs.draw(myCtx, myFloor);
         if (!isSoloMode && obs.x < oppCanvas.width) obs.draw(oppCtx, oppFloor);
 
+        // Checagem de colisão local (Você)
         if (checkCollision(myDino, obs, myFloor)) {
             isGameRunning = false;
+            myDino.isDead = true;
             
             if (isSoloMode) {
                 showEndScreen(`GAME OVER\n${Math.floor(score)} PONTOS`, "neon-magenta");
             } else {
-                socket.emit('game_over', currentRoom);
+                socket.emit('game_over', currentRoom); // Agora envia o código certo sempre!
                 showEndScreen("VOCÊ PERDEU! 💥", "neon-magenta");
             }
             return;
