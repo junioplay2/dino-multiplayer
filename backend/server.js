@@ -45,13 +45,36 @@ io.on('connection', (socket) => {
         socket.to(roomCode).emit('opponent_jump');
     });
 
-    // Alguém bateu no obstáculo
+    // 🛠️ CORREÇÃO CRÍTICA: Alguém bateu no obstáculo
     socket.on('game_over', (roomCode) => {
-        socket.to(roomCode).emit('you_win'); // O outro ganha
+        if (roomCode) {
+            // 1. Avisa o outro client que o dino do oponente dele morreu (para congelar a animação)
+            socket.to(roomCode).emit('opponent-died');
+            
+            // 2. Avisa o outro client que ele ganhou a partida
+            socket.to(roomCode).emit('you_win'); 
+        }
     });
 
+    // Limpeza de salas quando o jogador desconecta ou recarrega a página
     socket.on('disconnect', () => {
         console.log('Jogador desconectou:', socket.id);
+        
+        for (const roomCode in rooms) {
+            const room = rooms[roomCode];
+            const isPlayerInRoom = room.players.some(p => p.id === socket.id);
+            
+            if (isPlayerInRoom) {
+                // Se o jogo estava rodando, avisa o sobrevivente que ele ganhou por W.O.
+                socket.to(roomCode).emit('opponent-died');
+                socket.to(roomCode).emit('you_win');
+                
+                // Deleta a sala para liberar espaço na memória do servidor
+                delete rooms[roomCode];
+                console.log(`Sala ${roomCode} encerrada e removida.`);
+                break;
+            }
+        }
     });
 });
 
