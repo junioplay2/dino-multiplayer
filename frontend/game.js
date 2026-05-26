@@ -1,5 +1,5 @@
 // 🚨 VERIFIQUE SE O NOME DO SEU LINK DO RENDER TERMINA COM 'multiplayer' OU 'multiplaye'
-const socket = io('https://dino-multiplaye.onrender.com'); 
+const socket = io('https://dino-multiplayer.onrender.com'); 
 
 let currentRoom = '';
 let isGameRunning = false;
