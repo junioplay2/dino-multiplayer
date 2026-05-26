@@ -1,4 +1,4 @@
-// 🚨 COLOQUE A SUA URL DO RENDER AQUI EMBAIXO:
+// 🚨 VERIFIQUE SE O NOME DO SEU LINK DO RENDER TERMINA COM 'multiplayer' OU 'multiplaye'
 const socket = io('https://dino-multiplaye.onrender.com'); 
 
 let currentRoom = '';
@@ -43,7 +43,7 @@ class Dino {
         this.vy = 0;
         this.isJumping = false;
         this.color = color;
-        this.isDead = false; // 🔒 Controla se este dino específico está morto
+        this.isDead = false; 
     }
     jump() {
         if (!this.isJumping && !this.isDead) {
@@ -65,11 +65,10 @@ class Dino {
         ctx.shadowBlur = 8;
         ctx.shadowColor = this.color;
         
-        // Se estiver morto, deixa opaco/transparente para dar efeito visual de derrota
-        if (this.isDead) ctx.globalAlpha = 0.4;
+        if (this.isDead) ctx.globalAlpha = 0.4; // Efeito fantasma translúcido se morrer
         
         ctx.fillRect(this.x, this.y - this.height, this.width, this.height);
-        ctx.globalAlpha = 1.0; // Reseta opacidade
+        ctx.globalAlpha = 1.0; 
         ctx.shadowBlur = 0;
     }
 }
@@ -81,7 +80,7 @@ class Obstacle {
         this.height = 26;
     }
     update() {
-        this.x -= gameSpeed; // 🛠️ FIX: Removido o '0' que quebrava o script
+        this.x -= gameSpeed;
     }
     draw(ctx, floorY) {
         ctx.fillStyle = '#ff0055';
@@ -98,11 +97,9 @@ const oppDino = new Dino('#ff0844');
 let backgroundX = 0;
 
 function drawScenery(ctx, floorY) {
-    // Estrelas
     ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
     for(let i=1; i<=6; i++) { ctx.fillRect(i * (ctx.canvas.width / 7), 30, 2, 2); }
 
-    // Montanhas Parallax
     backgroundX -= (gameSpeed * 0.05);
     if (backgroundX <= -180) backgroundX = 0;
 
@@ -116,7 +113,6 @@ function drawScenery(ctx, floorY) {
         ctx.fill();
     }
 
-    // Linha do Chão Neon
     ctx.strokeStyle = ctx.canvas.id === "myCanvas" ? "#00f2fe" : "#ff0844";
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -124,7 +120,6 @@ function drawScenery(ctx, floorY) {
     ctx.lineTo(ctx.canvas.width, floorY);
     ctx.stroke();
 
-    // Grade tridimensional da Pista
     ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
     ctx.lineWidth = 1;
     let numLines = Math.ceil(ctx.canvas.width / 50) + 2;
@@ -142,9 +137,7 @@ function drawScenery(ctx, floorY) {
 document.getElementById('btnSolo').addEventListener('click', () => {
     isSoloMode = true;
     score = 0;
-    
     splitContainer.classList.add('solo-active'); 
-    
     myTagType.innerText = "Pontos:";
     loginScreen.style.display = 'none';
     gameScreen.style.display = 'flex';
@@ -164,7 +157,7 @@ document.getElementById('btnJoin').addEventListener('click', () => {
     myName = document.getElementById('playerName').value || 'Player 2';
     const code = document.getElementById('roomCodeInput').value.toUpperCase();
     if (code) {
-        currentRoom = code; // 🚀 FIX: Agora o Player 2 memoriza a sala dele perfeitamente!
+        currentRoom = code; 
         socket.emit('join_room', { name: myName, roomCode: code });
     }
 });
@@ -176,9 +169,9 @@ socket.on('room_created', (roomCode) => {
     displayRoomCode.innerText = roomCode;
 });
 
-// Ouvir quando o oponente morrer
+// Ouvir quando o oponente morrer para congelá-lo localmente
 socket.on('opponent-died', () => {
-    if (oppDino) { // 🛠️ FIX: Alterado de 'opponent' para 'oppDino'
+    if (oppDino) {
         oppDino.isDead = true; 
         console.log("O oponente colidiu e morreu!");
     }
@@ -207,7 +200,7 @@ socket.on('opponent_jump', () => {
 socket.on('you_win', () => {
     if (isGameRunning && !isSoloMode) {
         isGameRunning = false;
-        oppDino.isDead = true; // Força o congelamento dele na tela
+        oppDino.isDead = true;
         showEndScreen("VOCÊ VENCEU! 🏆", "neon-cyan");
     }
 });
@@ -218,8 +211,8 @@ function initGame() {
     gameSpeed = 4.5; 
     obstacleTimer = 0;
 
-    myDino.isDead = false;  // Reset de vida
-    oppDino.isDead = false; // Reset de vida
+    myDino.isDead = false;  
+    oppDino.isDead = false; 
 
     myCanvas.width = myCanvas.clientWidth;
     myCanvas.height = myCanvas.clientHeight;
@@ -308,7 +301,7 @@ function gameLoop() {
         drawScenery(oppCtx, oppFloor);
         
         if (!oppDino.isDead) { 
-            oppDino.update(oppFloor); // 🔒 Só atualiza a posição e gravidade se estiver vivo!
+            oppDino.update(oppFloor); 
         }
         oppDino.draw(oppCtx);
     }
@@ -329,7 +322,6 @@ function gameLoop() {
         if (obs.x < myCanvas.width) obs.draw(myCtx, myFloor);
         if (!isSoloMode && obs.x < oppCanvas.width) obs.draw(oppCtx, oppFloor);
 
-        // Checagem de colisão local (Você)
         if (checkCollision(myDino, obs, myFloor)) {
             isGameRunning = false;
             myDino.isDead = true;
@@ -337,7 +329,7 @@ function gameLoop() {
             if (isSoloMode) {
                 showEndScreen(`GAME OVER\n${Math.floor(score)} PONTOS`, "neon-magenta");
             } else {
-                socket.emit('game_over', currentRoom); // Agora envia o código certo sempre!
+                socket.emit('game_over', currentRoom); 
                 showEndScreen("VOCÊ PERDEU! 💥", "neon-magenta");
             }
             return;
