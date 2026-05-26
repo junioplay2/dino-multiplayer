@@ -17,9 +17,23 @@
             
             <input type="text" id="playerName" placeholder="Seu Nickname" autocomplete="off">
             <button id="btnCreate" class="btn btn-cyan">Criar Mundo</button>
+            
             <div class="divider">OU</div>
+            
             <input type="text" id="roomCodeInput" placeholder="Código do Mundo" autocomplete="off">
             <button id="btnJoin" class="btn btn-magenta">Entrar no Mundo</button>
+
+            <div class="menu-addons" style="margin-top: 25px; display: flex; gap: 15px; justify-content: center; background: rgba(27, 13, 58, 0.9); padding: 15px; border-radius: 8px; border: 1px solid #00f2fe; box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);">
+                <div style="flex: 1; text-align: left; border-right: 1px solid rgba(255, 255, 255, 0.1); padding-right: 10px;">
+                    <h4 style="color: #ff0055; margin: 0 0 10px 0; font-size: 13px; text-shadow: 0 0 5px #ff0055; font-family: sans-serif;">🏆 TOP 5 RECORDES</h4>
+                    <ol id="leaderboard-list" style="color: #fff; padding-left: 20px; margin: 0; font-family: monospace; font-size: 12px; line-height: 1.5;"></ol>
+                </div>
+
+                <div style="flex: 1; text-align: left; padding-left: 5px;">
+                    <h4 style="color: #00f2fe; margin: 0 0 10px 0; font-size: 13px; text-shadow: 0 0 5px #00f2fe; font-family: sans-serif;">🌐 SALAS ABERTAS</h4>
+                    <div id="rooms-list" style="color: #fff; font-family: monospace; display: flex; flex-direction: column; gap: 6px; max-height: 90px; overflow-y: auto;"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -31,13 +45,18 @@
         <button onclick="window.location.reload()" class="btn-back">Cancelar e Voltar</button>
     </div>
 
-    <div id="game-screen" class="screen format-game" style="display: none;">
-        <div id="split-container" class="split-container">
+    <div id="game-screen" class="screen format-game" style="display: none; flex-direction: column; justify-content: flex-start; align-items: center;">
+        
+        <div id="match-scoreboard" style="color: #fff; font-size: 16px; font-weight: bold; text-align: center; margin: 10px auto 5px auto; padding: 6px 20px; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; font-family: monospace; z-index: 10; display: none; width: fit-content;">
+            Placar: Você 0 x 0 Oponente
+        </div>
+
+        <div id="split-container" class="split-container" style="flex: 1; width: 100%;">
             <div id="oppWrapper" class="canvas-wrapper border-magenta">
                 <div class="player-tag tag-magenta">Adversário: <span id="oppName">...</span></div>
                 <canvas id="oppCanvas"></canvas>
             </div>
-            
+
             <div id="myWrapper" class="canvas-wrapper border-cyan">
                 <div class="player-tag tag-cyan"><span id="myTagType">Você:</span> <span id="myName">...</span></div>
                 <canvas id="myCanvas"></canvas>
