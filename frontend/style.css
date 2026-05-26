@@ -1,100 +1,173 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Poppins:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Poppins:wght=400;600;700&display=swap');
 
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; user-select: none; }
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+    font-family: 'Poppins', sans-serif; 
+    user-select: none; 
+}
 
 body {
-    background-color: #0b0518;
+    background-color: #060210;
     color: #fff;
     display: flex;
     justify-content: center;
     align-items: center;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     touch-action: none;
 }
 
 .screen { 
     width: 100%; 
-    height: 100%; 
-    max-width: 500px; 
-    padding: 20px; 
+    height: 100dvh; 
+    max-width: 850px; /* 🚀 EXPANDIDO: Agora o jogo ocupa muito mais espaço horizontal na tela */
+    padding: 15px; 
     display: flex; 
     flex-direction: column; 
     justify-content: center; 
     align-items: center; 
+    gap: 25px; /* Mais espaço respiro entre os blocos visuais */
 }
 
-.format-game { max-width: 100% !important; padding: 12px; justify-content: space-between; }
+.format-game { 
+    max-width: 850px !important; 
+}
 
-.title { font-family: 'Orbitron', sans-serif; font-size: 2.2rem; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
-.neon-cyan { color: #00f2fe; text-shadow: 0 0 12px #00f2fe; }
-.neon-magenta { color: #ff0844; text-shadow: 0 0 12px #ff0844; }
+/* Título maior e com super brilho neon */
+.title { 
+    font-family: 'Orbitron', sans-serif; 
+    font-size: 2.8rem; /* 🌟 MAIOR */
+    font-weight: 900;
+    text-transform: uppercase; 
+    letter-spacing: 3px; 
+    text-align: center; 
+    margin-bottom: 5px;
+}
+.neon-cyan { color: #00f2fe; text-shadow: 0 0 15px #00f2fe, 0 0 30px rgba(0, 242, 254, 0.5); }
+.neon-magenta { color: #ff0844; text-shadow: 0 0 15px #ff0844, 0 0 30px rgba(255, 8, 68, 0.5); }
 
-.card { background: rgba(20, 10, 35, 0.9); border: 2px solid #3d1e6d; padding: 22px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px; width: 100%; }
-.grid-gap { gap: 15px; }
+/* Card de Menu mais robusto e elegante */
+.card { 
+    background: linear-gradient(135deg, rgba(25, 12, 45, 0.95), rgba(15, 7, 30, 0.95)); 
+    border: 2px solid #512796; /* Borda neon roxa */
+    box-shadow: 0 0 25px rgba(81, 39, 150, 0.4); /* Brilho em volta do menu */
+    padding: 30px; /* Mais espaçoso por dentro */
+    border-radius: 16px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 18px; 
+    width: 100%; 
+}
+.grid-gap { gap: 20px; }
 
-input { padding: 14px; border: 2px solid #3d1e6d; border-radius: 6px; font-size: 1rem; background: #160b29; color: #fff; text-align: center; outline: none; width: 100%; }
-input:focus { border-color: #00f2fe; }
+/* Inputs maiores e centralizados */
+input { 
+    padding: 16px; 
+    border: 2px solid #4d268a; 
+    border-radius: 8px; 
+    font-size: 1.1rem; /* Fonte maior */
+    font-weight: 600;
+    background: #120824; 
+    color: #fff; 
+    text-align: center; 
+    outline: none; 
+    width: 100%; 
+    transition: 0.3s;
+}
+input:focus { 
+    border-color: #00f2fe; 
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+}
 
-.btn { padding: 14px; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; text-transform: uppercase; transition: 0.2s; width: 100%; }
-.btn-cyan { background: #00f2fe; color: #000; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); }
-.btn-magenta { background: #ff0844; color: #fff; box-shadow: 0 0 15px rgba(255, 8, 68, 0.4); }
-.btn-green { background: #39ff14; color: #000; box-shadow: 0 0 15px rgba(57, 255, 20, 0.4); }
-.btn:active { transform: scale(0.98); }
+/* Botões do Menu Grandes e Escandalosos */
+.btn { 
+    padding: 18px; /* Botão mais alto e fácil de clicar */
+    border: none; 
+    border-radius: 8px; 
+    font-size: 1.15rem; /* Fonte maior */
+    font-weight: 700; 
+    cursor: pointer; 
+    text-transform: uppercase; 
+    transition: 0.2s; 
+    width: 100%; 
+    letter-spacing: 1px;
+}
+.btn-cyan { background: #00f2fe; color: #000; box-shadow: 0 0 20px rgba(0, 242, 254, 0.5); }
+.btn-magenta { background: #ff0844; color: #fff; box-shadow: 0 0 20px rgba(255, 8, 68, 0.5); }
+.btn-green { background: #39ff14; color: #000; box-shadow: 0 0 20px rgba(57, 255, 20, 0.5); }
+.btn:active { transform: scale(0.97); }
 
-.divider { color: #68529a; font-size: 0.75rem; margin: 2px 0; font-weight: bold; text-align: center; }
-.room-code { font-family: 'Orbitron', sans-serif; font-size: 2.2rem; color: #ff0844; letter-spacing: 4px; margin: 15px 0; text-shadow: 0 0 10px #ff0844; text-align: center; }
-.loading-text { color: #8a75b5; font-size: 0.9rem; animation: pulse 1.5s infinite; text-align: center; }
-@keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+.divider { color: #7d65b3; font-size: 0.85rem; margin: 5px 0; font-weight: bold; text-align: center; letter-spacing: 1px; }
+.room-code { font-family: 'Orbitron', sans-serif; font-size: 2.6rem; color: #ff0844; letter-spacing: 5px; margin: 10px 0; text-shadow: 0 0 15px #ff0844; text-align: center; }
+.loading-text { color: #a28cc9; font-size: 1rem; font-weight: 600; animation: pulse 1.5s infinite; text-align: center; }
+@keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
 
-.btn-back { background: transparent; border: 1px solid #ff0844; color: #ff0844; padding: 10px 20px; border-radius: 6px; margin-top: 20px; cursor: pointer; }
+.btn-back { background: transparent; border: 2px solid #ff0844; color: #ff0844; padding: 12px 25px; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer; transition: 0.2s; }
+.btn-back:active { background: rgba(255, 8, 68, 0.1); }
 
 .split-container { 
     display: flex; 
     flex-direction: column; 
-    gap: 12px; 
+    gap: 15px; 
     width: 100%; 
-    flex: 1; 
+    align-items: stretch; 
 }
 
+/* 🌟 TELAS DO JOGO MUITO MAIORES E EM ALTA VISIBILIDADE */
 .canvas-wrapper { 
     position: relative; 
     width: 100%; 
     background: #000; 
-    border-radius: 10px; 
+    border-radius: 14px; 
     overflow: hidden; 
-    border: 2px solid; 
-    flex: 1; 
-    display: flex;
+    border: 3px solid #4d268a; 
+    box-shadow: 0 0 20px rgba(77, 38, 138, 0.5);
+    height: 220px; /* 🚀 Aumentado de 180px para 220px no modo Multiplayer (Garante tela ampla para os dois jogadores) */
 }
 
-/* CORREÇÃO AQUI: Removemos o 'object-fit: fill' para evitar distorção gráfica */
+/* 🌟 MODO SOLO ULTRA IMERSIVO (OCUPA QUASE A TELA TODA) */
+.split-container.solo-active #oppWrapper {
+    display: none !important;
+}
+.split-container.solo-active #myWrapper {
+    height: 380px !important; /* 🚀 Expandido para 380px de altura para jogar sozinho com visão gigante! */
+}
+
 canvas { 
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%; 
     height: 100%; 
     display: block;
-    background: linear-gradient(to bottom, #0f0726, #05020c); 
+    background: linear-gradient(to bottom, #0e0624, #04010a); 
 }
 
-.player-tag { position: absolute; top: 8px; left: 8px; font-size: 0.75rem; font-weight: bold; padding: 2px 8px; border-radius: 4px; z-index: 10; }
-.tag-magenta { background: #ff0844; color: #fff; }
-.tag-cyan { background: #00f2fe; color: #000; }
+.player-tag { position: absolute; top: 10px; left: 10px; font-size: 0.8rem; font-weight: bold; padding: 4px 10px; border-radius: 6px; z-index: 10; letter-spacing: 0.5px; }
+.tag-magenta { background: #ff0844; color: #fff; box-shadow: 0 0 10px rgba(255, 8, 68, 0.4); }
+.tag-cyan { background: #00f2fe; color: #000; box-shadow: 0 0 10px rgba(0, 242, 254, 0.4); }
 
+/* Botão de Pular mais espesso e chamativo */
 .jump-trigger {
     width: 100%; 
-    height: 75px; 
-    margin-top: 15px; 
-    margin-bottom: 38px; 
-    background: linear-gradient(45deg, #00f2fe, #4facfe);
+    height: 75px; /* Leve aumento na altura */
+    background: linear-gradient(45deg, #00f2fe, #0072ff);
     border: none; 
-    border-radius: 8px; 
+    border-radius: 12px; 
     color: #000; 
     font-family: 'Orbitron', sans-serif; 
-    font-size: 1.4rem;
-    font-weight: bold; 
-    box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4); 
+    font-size: 1.6rem; /* Texto maior */
+    font-weight: 900; 
+    box-shadow: 0 6px 20px rgba(0, 242, 254, 0.5); 
     cursor: pointer;
+    letter-spacing: 2px;
     padding-bottom: env(safe-area-inset-bottom); 
 }
-.jump-trigger:active { background: #4facfe; transform: translateY(1px); }
+.jump-trigger:active { 
+    background: linear-gradient(45deg, #0072ff, #00f2fe); 
+    transform: translateY(2px); 
+    box-shadow: 0 3px 10px rgba(0, 242, 254, 0.3);
+}

@@ -21,6 +21,7 @@ const oppWrapper = document.getElementById('oppWrapper');
 const myTagType = document.getElementById('myTagType');
 const btnRestart = document.getElementById('btnRestart');
 const btnMenu = document.getElementById('btnMenu');
+const splitContainer = document.getElementById('split-container');
 
 // Configuração dos Canvas
 const myCanvas = document.getElementById('myCanvas');
@@ -28,10 +29,10 @@ const myCtx = myCanvas.getContext('2d');
 const oppCanvas = document.getElementById('oppCanvas');
 const oppCtx = oppCanvas.getContext('2d');
 
-// Constantes físicas imutáveis
+// Constantes físicas
 const GRAVITY = 0.6;
 const JUMP_FORCE = -11;
-const SPAWN_X = 700; // Ponto universal fora da tela (Garante sincronia perfeita)
+const SPAWN_X = 580; 
 
 class Dino {
     constructor(color) {
@@ -91,7 +92,7 @@ const oppDino = new Dino('#ff0844');
 let backgroundX = 0;
 
 function drawScenery(ctx, floorY) {
-    // Estrelas Espalhadas pela largura total
+    // Estrelas
     ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
     for(let i=1; i<=6; i++) { ctx.fillRect(i * (ctx.canvas.width / 7), 30, 2, 2); }
 
@@ -117,7 +118,7 @@ function drawScenery(ctx, floorY) {
     ctx.lineTo(ctx.canvas.width, floorY);
     ctx.stroke();
 
-    // Linhas de perspectiva tridimensionais (Grid)
+    // Grade tridimensional da Pista
     ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
     ctx.lineWidth = 1;
     let numLines = Math.ceil(ctx.canvas.width / 50) + 2;
@@ -130,26 +131,31 @@ function drawScenery(ctx, floorY) {
     }
 }
 
-// --- CONTROLE DE MENUS E REDE ---
+// --- CONTROLE DE MENUS ---
 
 document.getElementById('btnSolo').addEventListener('click', () => {
     isSoloMode = true;
     score = 0;
-    oppWrapper.style.display = 'none';
+    
+    // Ativa a trava visual estável de 50%
+    splitContainer.classList.add('solo-active'); 
+    
     myTagType.innerText = "Pontos:";
     loginScreen.style.display = 'none';
     gameScreen.style.display = 'flex';
-    setTimeout(initGame, 400);
+    setTimeout(initGame, 300);
 });
 
 document.getElementById('btnCreate').addEventListener('click', () => {
     isSoloMode = false;
+    splitContainer.classList.remove('solo-active');
     myName = document.getElementById('playerName').value || 'Player 1';
     socket.emit('create_room', { name: myName });
 });
 
 document.getElementById('btnJoin').addEventListener('click', () => {
     isSoloMode = false;
+    splitContainer.classList.remove('solo-active');
     myName = document.getElementById('playerName').value || 'Player 2';
     const code = document.getElementById('roomCodeInput').value.toUpperCase();
     if (code) socket.emit('join_room', { name: myName, roomCode: code });
@@ -163,6 +169,7 @@ socket.on('room_created', (roomCode) => {
 });
 
 socket.on('start_game', (players) => {
+    splitContainer.classList.remove('solo-active'); 
     oppWrapper.style.display = 'flex'; 
     myTagType.innerText = "Você:";
     
@@ -174,7 +181,7 @@ socket.on('start_game', (players) => {
     waitingScreen.style.display = 'none';
     gameScreen.style.display = 'flex';
 
-    setTimeout(initGame, 400);
+    setTimeout(initGame, 300);
 });
 
 socket.on('opponent_jump', () => {
@@ -194,7 +201,6 @@ function initGame() {
     gameSpeed = 4.5; 
     obstacleTimer = 0;
 
-    // Ajuste de resolução interno 1:1 inicial
     myCanvas.width = myCanvas.clientWidth;
     myCanvas.height = myCanvas.clientHeight;
     myDino.y = myCanvas.height - 35;
@@ -248,19 +254,22 @@ btnMenu.addEventListener('click', () => {
     window.location.reload();
 });
 
-// --- LOOP DO JOGO ---
+// --- LOOP PRINCIPAL ---
 function gameLoop() {
     if (!isGameRunning) return;
 
-    // Força a resolução interna do Canvas a bater 1:1 com o visor do aparelho
-    myCanvas.width = myCanvas.clientWidth;
-    myCanvas.height = myCanvas.clientHeight;
+    if (myCanvas.width !== myCanvas.clientWidth || myCanvas.height !== myCanvas.clientHeight) {
+        myCanvas.width = myCanvas.clientWidth;
+        myCanvas.height = myCanvas.clientHeight;
+    }
     let myFloor = myCanvas.height - 35;
 
     let oppFloor = 0;
     if (!isSoloMode) {
-        oppCanvas.width = oppCanvas.clientWidth;
-        oppCanvas.height = oppCanvas.clientHeight;
+        if (oppCanvas.width !== oppCanvas.clientWidth || oppCanvas.height !== oppCanvas.clientHeight) {
+            oppCanvas.width = oppCanvas.clientWidth;
+            oppCanvas.height = oppCanvas.clientHeight;
+        }
         oppFloor = oppCanvas.height - 35;
     }
 
@@ -294,7 +303,6 @@ function gameLoop() {
         let obs = obstacles[i];
         obs.update();
 
-        // Desenha se estiver dentro da área visível do aparelho
         if (obs.x < myCanvas.width) obs.draw(myCtx, myFloor);
         if (!isSoloMode && obs.x < oppCanvas.width) obs.draw(oppCtx, oppFloor);
 
