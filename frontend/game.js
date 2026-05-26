@@ -1,12 +1,12 @@
 // 🚨 COLOQUE A SUA URL DO RENDER AQUI EMBAIXO:
-const socket = io('https://dino-multiplayer-backend.onrender.com'); 
+const socket = io('https://dino-multiplayer.onrender.com'); 
 
 let currentRoom = '';
 let isGameRunning = false;
 let isSoloMode = false; 
 let score = 0;          
 let myName = '';
-let gameSpeed = 3.5; 
+let gameSpeed = 4.5; 
 let obstacleTimer = 0;
 let obstacles = [];
 
@@ -19,7 +19,6 @@ const displayRoomCode = document.getElementById('displayRoomCode');
 const endGameResult = document.getElementById('endGameResult');
 const oppWrapper = document.getElementById('oppWrapper');
 const myTagType = document.getElementById('myTagType');
-
 const btnRestart = document.getElementById('btnRestart');
 const btnMenu = document.getElementById('btnMenu');
 
@@ -29,14 +28,15 @@ const myCtx = myCanvas.getContext('2d');
 const oppCanvas = document.getElementById('oppCanvas');
 const oppCtx = oppCanvas.getContext('2d');
 
+// Constantes físicas imutáveis
 const GRAVITY = 0.6;
 const JUMP_FORCE = -11;
-let FLOOR_Y = 150; // Agora é dinâmico por tela
+const SPAWN_X = 700; // Ponto universal fora da tela (Garante sincronia perfeita)
 
 class Dino {
     constructor(color) {
         this.x = 60;
-        this.y = FLOOR_Y;
+        this.y = 0;
         this.width = 24;
         this.height = 28;
         this.vy = 0;
@@ -58,7 +58,7 @@ class Dino {
             this.isJumping = false;
         }
     }
-    draw(ctx, floorY) {
+    draw(ctx) {
         ctx.fillStyle = this.color;
         ctx.shadowBlur = 8;
         ctx.shadowColor = this.color;
@@ -91,25 +91,25 @@ const oppDino = new Dino('#ff0844');
 let backgroundX = 0;
 
 function drawScenery(ctx, floorY) {
-    // Estrelas
+    // Estrelas Espalhadas pela largura total
     ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-    for(let i=1; i<=5; i++) { ctx.fillRect(i * (ctx.canvas.width/6), 30, 2, 2); }
+    for(let i=1; i<=6; i++) { ctx.fillRect(i * (ctx.canvas.width / 7), 30, 2, 2); }
 
     // Montanhas Parallax
     backgroundX -= (gameSpeed * 0.05);
-    if (backgroundX <= -200) backgroundX = 0;
+    if (backgroundX <= -180) backgroundX = 0;
 
     ctx.fillStyle = "#1b0d3a";
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
         let startX = backgroundX + (i * 180);
         ctx.beginPath();
         ctx.moveTo(startX, floorY);
-        ctx.lineTo(startX + 90, floorY - 80);
+        ctx.lineTo(startX + 90, floorY - 70);
         ctx.lineTo(startX + 180, floorY);
         ctx.fill();
     }
 
-    // Linha do Chão
+    // Linha do Chão Neon
     ctx.strokeStyle = ctx.canvas.id === "myCanvas" ? "#00f2fe" : "#ff0844";
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -117,43 +117,29 @@ function drawScenery(ctx, floorY) {
     ctx.lineTo(ctx.canvas.width, floorY);
     ctx.stroke();
 
-    // Grid de velocidade da pista
+    // Linhas de perspectiva tridimensionais (Grid)
     ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
     ctx.lineWidth = 1;
-    for (let i = 0; i < 15; i++) {
-        let lineX = ((backgroundX * 8) + (i * 50)) % (ctx.canvas.width + 50);
+    let numLines = Math.ceil(ctx.canvas.width / 50) + 2;
+    for (let i = 0; i < numLines; i++) {
+        let lineX = ((backgroundX * 8) + (i * 50)) % (ctx.canvas.width + 100);
         ctx.beginPath();
         ctx.moveTo(lineX, floorY + 2);
-        ctx.lineTo(lineX - 15, ctx.canvas.height);
+        ctx.lineTo(lineX - 20, ctx.canvas.height);
         ctx.stroke();
     }
 }
 
-// AJUSTADOR AUTOMÁTICO DE TAMANHO (MÁGICA DA RESPONSIVIDADE)
-function fitCanvasResolution() {
-    myCanvas.width = myCanvas.clientWidth;
-    myCanvas.height = myCanvas.clientHeight;
-    
-    if (!isSoloMode) {
-        oppCanvas.width = oppCanvas.clientWidth;
-        oppCanvas.height = oppCanvas.clientHeight;
-    }
-}
-
-// --- DISPARADORES DOS MODOS ---
+// --- CONTROLE DE MENUS E REDE ---
 
 document.getElementById('btnSolo').addEventListener('click', () => {
     isSoloMode = true;
     score = 0;
-    
     oppWrapper.style.display = 'none';
     myTagType.innerText = "Pontos:";
-    
     loginScreen.style.display = 'none';
     gameScreen.style.display = 'flex';
-    
-    fitCanvasResolution();
-    setTimeout(initGame, 500);
+    setTimeout(initGame, 400);
 });
 
 document.getElementById('btnCreate').addEventListener('click', () => {
@@ -188,8 +174,7 @@ socket.on('start_game', (players) => {
     waitingScreen.style.display = 'none';
     gameScreen.style.display = 'flex';
 
-    fitCanvasResolution();
-    setTimeout(initGame, 500);
+    setTimeout(initGame, 400);
 });
 
 socket.on('opponent_jump', () => {
@@ -208,10 +193,17 @@ function initGame() {
     obstacles = [];
     gameSpeed = 4.5; 
     obstacleTimer = 0;
-    
-    // Define a linha de chão baseada na altura da tela calculada
+
+    // Ajuste de resolução interno 1:1 inicial
+    myCanvas.width = myCanvas.clientWidth;
+    myCanvas.height = myCanvas.clientHeight;
     myDino.y = myCanvas.height - 35;
-    oppDino.y = oppCanvas.height - 35;
+
+    if (!isSoloMode) {
+        oppCanvas.width = oppCanvas.clientWidth;
+        oppCanvas.height = oppCanvas.clientHeight;
+        oppDino.y = oppCanvas.height - 35;
+    }
     
     gameLoop();
 }
@@ -241,33 +233,38 @@ function showEndScreen(text, styleClass) {
     endGameResult.className = `title ${styleClass}`;
 }
 
-// --- CONFIGURAÇÃO DOS NOVOS BOTÕES DO GAME OVER ---
 btnRestart.addEventListener('click', () => {
     gameoverScreen.style.display = 'none';
     if (isSoloMode) {
         score = 0;
         gameScreen.style.display = 'flex';
-        fitCanvasResolution();
-        setTimeout(initGame, 300);
+        setTimeout(initGame, 200);
     } else {
-        // No multiplayer, volta pra sincronização
-        window.location.reload();
+        window.location.reload(); 
     }
 });
 
 btnMenu.addEventListener('click', () => {
-    window.location.reload(); // Força reset completo limpo de volta pro menu
+    window.location.reload();
 });
-
 
 // --- LOOP DO JOGO ---
 function gameLoop() {
     if (!isGameRunning) return;
 
-    gameSpeed += 0.0015;
-
+    // Força a resolução interna do Canvas a bater 1:1 com o visor do aparelho
+    myCanvas.width = myCanvas.clientWidth;
+    myCanvas.height = myCanvas.clientHeight;
     let myFloor = myCanvas.height - 35;
-    let oppFloor = !isSoloMode ? oppCanvas.height - 35 : 0;
+
+    let oppFloor = 0;
+    if (!isSoloMode) {
+        oppCanvas.width = oppCanvas.clientWidth;
+        oppCanvas.height = oppCanvas.clientHeight;
+        oppFloor = oppCanvas.height - 35;
+    }
+
+    gameSpeed += 0.0016; 
 
     if (isSoloMode) {
         score += 0.1;
@@ -281,24 +278,25 @@ function gameLoop() {
         oppCtx.clearRect(0, 0, oppCanvas.width, oppCanvas.height);
         drawScenery(oppCtx, oppFloor);
         oppDino.update(oppFloor);
-        oppDino.draw(oppCtx, oppFloor);
+        oppDino.draw(oppCtx);
     }
 
     obstacleTimer++;
-    if (obstacleTimer > 95) { 
-        obstacles.push(new Obstacle(myCanvas.width + 20));
+    if (obstacleTimer > 90) { 
+        obstacles.push(new Obstacle(SPAWN_X)); 
         obstacleTimer = 0;
     }
 
     myDino.update(myFloor);
-    myDino.draw(myCtx, myFloor);
+    myDino.draw(myCtx);
 
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.update();
 
-        obs.draw(myCtx, myFloor);
-        if (!isSoloMode) obs.draw(oppCtx, oppFloor);
+        // Desenha se estiver dentro da área visível do aparelho
+        if (obs.x < myCanvas.width) obs.draw(myCtx, myFloor);
+        if (!isSoloMode && obs.x < oppCanvas.width) obs.draw(oppCtx, oppFloor);
 
         if (checkCollision(myDino, obs, myFloor)) {
             isGameRunning = false;
@@ -319,8 +317,3 @@ function gameLoop() {
 
     requestAnimationFrame(gameLoop);
 }
-
-// Monitora se o usuário girar a tela do celular para reajustar tudo
-window.addEventListener('resize', () => {
-    if (isGameRunning) fitCanvasResolution();
-});
