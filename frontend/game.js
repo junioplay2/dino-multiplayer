@@ -1,4 +1,4 @@
-// 🚨 COLOQUE A SUA URL DO RENDER AQUI EMBAIXO:
+// 🚨 MANTENHA A URL DO SEU RENDER AQUI:
 const socket = io('https://dino-multiplayer.onrender.com'); 
 
 let currentRoom = '';
@@ -36,25 +36,33 @@ const GRAVITY = 0.6;
 const JUMP_FORCE = -11;
 const SPAWN_X = 580; 
 
-// --- CLASSE DINO ATUALIZADA PARA 2D PIXEL ART ANIMADO ---
+// --- CLASSE DINO BLINDADA ANTI-CRASH ---
 class Dino {
-    constructor(color, imgSrc) {
+    constructor(color, spriteUrl) {
         this.x = 60;
         this.y = 0;
-        this.width = 40;   // Largura do Dino na tela
-        this.height = 44;  // Altura do Dino na tela
+        this.width = 40;   
+        this.height = 44;  
         this.vy = 0;
         this.isJumping = false;
         this.color = color;
         this.isDead = false; 
 
-        // Carrega a folha de sprites pixel art
+        // Carrega a imagem direto da URL para evitar erros de rota no Vercel
         this.img = new Image();
-        this.img.src = imgSrc;
+        this.img.crossOrigin = "Anonymous";
+        this.imageReady = false;
 
-        // Controle de quadros da animação
-        this.animFrame = 0;  // 0: Parado, 1 e 2: Correndo, 3: Morto
-        this.animTimer = 0;  // Temporizador para trocar de marcha das pernas
+        this.img.onload = () => {
+            // Só libera a imagem se ela tiver o tamanho certo da folha de sprites (evita 404s disfarçados)
+            if (this.img.naturalWidth >= 170) {
+                this.imageReady = true;
+            }
+        };
+        this.img.src = spriteUrl;
+
+        this.animFrame = 0;  
+        this.animTimer = 0;  
     }
     
     jump() {
@@ -73,13 +81,11 @@ class Dino {
             this.isJumping = false;
         }
 
-        // --- SISTEMA DE ANIMAÇÃO POR QUADRO ---
         if (this.isDead) {
-            this.animFrame = 3; // Frame de colisão/derrota
+            this.animFrame = 3; 
         } else if (this.isJumping) {
-            this.animFrame = 0; // Frame estático no ar (parado/voando)
+            this.animFrame = 0; 
         } else {
-            // Se está correndo no chão, alterna as pernas com base na velocidade do jogo
             this.animTimer++;
             if (this.animTimer > (25 / gameSpeed)) { 
                 this.animFrame = this.animFrame === 1 ? 2 : 1;
@@ -94,17 +100,28 @@ class Dino {
         
         if (this.isDead) ctx.globalAlpha = 0.4;
 
-        // Configuração dos recortes dentro da imagem baixada (cada frame tem 44x47 pixels originais)
-        let spriteWidth = 44;
-        let spriteHeight = 47;
-        let srcX = this.animFrame * spriteWidth;
+        if (this.imageReady) {
+            try {
+                let spriteWidth = 44;
+                let spriteHeight = 47;
+                let srcX = this.animFrame * spriteWidth;
 
-        // Renderiza o frame correto do pixel art
-        ctx.drawImage(
-            this.img, 
-            srcX, 0, spriteWidth, spriteHeight,         // Onde recortar na imagem original
-            this.x, this.y - this.height, this.width, this.height // Onde desenhar na tela do canvas
-        );
+                // Tenta desenhar o Pixel Art
+                ctx.drawImage(
+                    this.img, 
+                    srcX, 0, spriteWidth, spriteHeight,         
+                    this.x, this.y - this.height, this.width, this.height 
+                );
+            } catch (e) {
+                // FALLBACK: Se der qualquer erro bizarro de recorte no navegador, desenha o bloco
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y - this.height, this.width, this.height);
+            }
+        } else {
+            // FALLBACK: Enquanto a imagem baixa ou se falhar, desenha o bloco neon
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y - this.height, this.width, this.height);
+        }
 
         ctx.globalAlpha = 1.0; 
         ctx.shadowBlur = 0;
@@ -129,9 +146,10 @@ class Obstacle {
     }
 }
 
-// Instanciação usando os novos arquivos locais baixados
-const myDino = new Dino('#00f2fe', 'dino_cyan.png');
-const oppDino = new Dino('#ff0844', 'dino_magenta.png');
+// Criando os Dinos buscando as imagens DIRETO DA NUVEM (URL infalível)
+const myDino = new Dino('#00f2fe', 'https://raw.githubusercontent.com/avsthiago/assets-sharing/main/dino_cyan.png');
+const oppDino = new Dino('#ff0844', 'https://raw.githubusercontent.com/avsthiago/assets-sharing/main/dino_magenta.png');
+
 let backgroundX = 0;
 
 function drawScenery(ctx, floorY) {
@@ -166,7 +184,7 @@ function drawScenery(ctx, floorY) {
     }
 }
 
-// --- ESCUTAS SOCKET.IO DE INFRAESTRUTURA COMPARTILHADA ---
+// --- SOCKET.IO EVENTS ---
 
 socket.on('update_leaderboard', (leaderboard) => {
     if(!leaderboardList) return;
@@ -267,8 +285,7 @@ socket.on('opponent_left', () => {
     window.location.reload();
 });
 
-// --- CONTROLE DE MENUS ---
-
+// --- MENUS ---
 document.getElementById('btnSolo').addEventListener('click', () => {
     isSoloMode = true;
     score = 0;
@@ -318,6 +335,7 @@ function initGame() {
         oppDino.y = oppCanvas.height - 35;
     }
     
+    if (window.gameLoopFrame) cancelAnimationFrame(window.gameLoopFrame);
     gameLoop();
 }
 
@@ -331,7 +349,6 @@ document.addEventListener('keydown', (e) => { if (e.code === 'Space') triggerJum
 document.getElementById('btnJump').addEventListener('touchstart', (e) => { e.preventDefault(); triggerJump(); });
 
 function checkCollision(dino, obs, floorY) {
-    // Caixa de colisão levemente reduzida para se ajustar melhor ao formato do Pixel Art (evita mortes injustas)
     return (
         dino.x + 4 < obs.x + obs.width &&
         dino.x + dino.width - 4 > obs.x &&
@@ -363,81 +380,84 @@ btnMenu.addEventListener('click', () => {
     window.location.reload();
 });
 
-// --- LOOP PRINCIPAL ---
+// --- LOOP PRINCIPAL SEGURO ---
 function gameLoop() {
     if (!isGameRunning) return;
 
-    if (myCanvas.width !== myCanvas.clientWidth || myCanvas.height !== myCanvas.clientHeight) {
-        myCanvas.width = myCanvas.clientWidth;
-        myCanvas.height = myCanvas.clientHeight;
-    }
-    let myFloor = myCanvas.height - 35;
-
-    let oppFloor = 0;
-    if (!isSoloMode) {
-        if (oppCanvas.width !== oppCanvas.clientWidth || oppCanvas.height !== oppCanvas.clientHeight) {
-            oppCanvas.width = oppCanvas.clientWidth;
-            oppCanvas.height = oppCanvas.clientHeight;
+    try {
+        if (myCanvas.width !== myCanvas.clientWidth || myCanvas.height !== myCanvas.clientHeight) {
+            myCanvas.width = myCanvas.clientWidth;
+            myCanvas.height = myCanvas.clientHeight;
         }
-        oppFloor = oppCanvas.height - 35;
-    }
+        let myFloor = myCanvas.height - 35;
 
-    // 🔥 IMPORTANTE PARA PIXEL ART: Desativa a filtragem bilinear que deixa os pixels borrados
-    myCtx.imageSmoothingEnabled = false;
-    if (!isSoloMode) oppCtx.imageSmoothingEnabled = false;
-
-    gameSpeed += 0.0016; 
-    score += 0.1; 
-
-    if (isSoloMode) {
-        document.getElementById('myName').innerText = Math.floor(score);
-    }
-
-    myCtx.clearRect(0, 0, myCanvas.width, myCanvas.height);
-    drawScenery(myCtx, myFloor);
-
-    if (!isSoloMode) {
-        oppCtx.clearRect(0, 0, oppCanvas.width, oppCanvas.height);
-        drawScenery(oppCtx, oppFloor);
-        if (!oppDino.isDead) { 
-            oppDino.update(oppFloor); 
-        }
-        oppDino.draw(oppCtx);
-    }
-
-    obstacleTimer++;
-    if (obstacleTimer > 90) { 
-        obstacles.push(new Obstacle(SPAWN_X)); 
-        obstacleTimer = 0;
-    }
-
-    myDino.update(myFloor);
-    myDino.draw(myCtx);
-
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-        let obs = obstacles[i];
-        obs.update();
-
-        if (obs.x < myCanvas.width) obs.draw(myCtx, myFloor);
-        if (!isSoloMode && obs.x < oppCanvas.width) obs.draw(oppCtx, oppFloor);
-
-        if (checkCollision(myDino, obs, myFloor)) {
-            isGameRunning = false;
-            myDino.isDead = true;
-            
-            if (isSoloMode) {
-                socket.emit('submit_score', { name: 'Solo Player', score: score });
-                showEndScreen(`GAME OVER\n${Math.floor(score)} PONTOS`, "neon-magenta");
-            } else {
-                socket.emit('game_over', currentRoom); 
+        let oppFloor = 0;
+        if (!isSoloMode) {
+            if (oppCanvas.width !== oppCanvas.clientWidth || oppCanvas.height !== oppCanvas.clientHeight) {
+                oppCanvas.width = oppCanvas.clientWidth;
+                oppCanvas.height = oppCanvas.clientHeight;
             }
-            return;
+            oppFloor = oppCanvas.height - 35;
         }
 
-        if (obs.x + obs.width < 0) {
-            obstacles.splice(i, 1);
+        myCtx.imageSmoothingEnabled = false;
+        if (!isSoloMode) oppCtx.imageSmoothingEnabled = false;
+
+        gameSpeed += 0.0016; 
+        score += 0.1; 
+
+        if (isSoloMode) {
+            document.getElementById('myName').innerText = Math.floor(score);
         }
+
+        myCtx.clearRect(0, 0, myCanvas.width, myCanvas.height);
+        drawScenery(myCtx, myFloor);
+
+        if (!isSoloMode) {
+            oppCtx.clearRect(0, 0, oppCanvas.width, oppCanvas.height);
+            drawScenery(oppCtx, oppFloor);
+            if (!oppDino.isDead) { 
+                oppDino.update(oppFloor); 
+            }
+            oppDino.draw(oppCtx);
+        }
+
+        obstacleTimer++;
+        if (obstacleTimer > 90) { 
+            obstacles.push(new Obstacle(SPAWN_X)); 
+            obstacleTimer = 0;
+        }
+
+        myDino.update(myFloor);
+        myDino.draw(myCtx);
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            let obs = obstacles[i];
+            obs.update();
+
+            if (obs.x < myCanvas.width) obs.draw(myCtx, myFloor);
+            if (!isSoloMode && obs.x < oppCanvas.width) obs.draw(oppCtx, oppFloor);
+
+            if (checkCollision(myDino, obs, myFloor)) {
+                isGameRunning = false;
+                myDino.isDead = true;
+                
+                if (isSoloMode) {
+                    socket.emit('submit_score', { name: 'Solo Player', score: score });
+                    showEndScreen(`GAME OVER\n${Math.floor(score)} PONTOS`, "neon-magenta");
+                } else {
+                    socket.emit('game_over', currentRoom); 
+                }
+                return;
+            }
+
+            if (obs.x + obs.width < 0) {
+                obstacles.splice(i, 1);
+            }
+        }
+    } catch (err) {
+        console.error("Erro no Game Loop:", err);
     }
 
-    requestAnimationFrame(gameLoop);
+    window.gameLoopFrame = requestAnimationFrame(gameLoop);
 }
