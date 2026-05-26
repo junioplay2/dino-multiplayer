@@ -8,7 +8,10 @@ let score = 0;
 let myName = '';
 let gameSpeed = 4.5; 
 let obstacleTimer = 0;
+let powerUpTimer = 0;
 let obstacles = [];
+let powerUps = [];
+let level = 1;
 
 // Elementos HTML
 const loginScreen = document.getElementById('login-screen');
@@ -37,7 +40,7 @@ const JUMP_FORCE = -11;
 const SPAWN_X = 580; 
 
 // ==========================================
-// 🎨 MATRIZ DE PIXEL ART (Criado em código!)
+// 🎨 MATRIZES DE PIXEL ART (100% NATIVO)
 // ==========================================
 
 const DINO_FRAMES = [
@@ -124,6 +127,57 @@ const CACTUS_FRAME = [
     "   ██   "
 ];
 
+const BIRD_FRAMES = [
+    // Frame 0: Asa para cima
+    [
+      "      ████      ",
+      "    ████████    ",
+      "   ██████████   ",
+      "██████████████  ",
+      "████████████████",
+      "  ████████████  ",
+      "    ██████      ",
+      "    ██          "
+    ],
+    // Frame 1: Asa para baixo
+    [
+      "    ██          ",
+      "    ██████      ",
+      "  ████████████  ",
+      "████████████████",
+      "██████████████  ",
+      "   ██████████   ",
+      "    ████████    ",
+      "      ████      "
+    ]
+];
+
+const SHIELD_FRAME = [
+    "   ████   ",
+    " ████████ ",
+    "██████████",
+    "██████████",
+    "██████████",
+    " ████████ ",
+    "   ████   "
+];
+
+// Novas matrizes para a Estrela Cadente e o Buraco/Cratera
+const STAR_FRAME = [
+    "    █    ",
+    "  █████  ",
+    "█████████",
+    "  █████  ",
+    "   █ █   "
+];
+
+const CRATER_FRAME = [
+    "█          █",
+    " ██      ██ ",
+    "  ████████  ",
+    "   ██████   "
+];
+
 // --- CLASSES DO JOGO ---
 
 class Dino {
@@ -134,26 +188,39 @@ class Dino {
         this.height = 44;  
         this.vy = 0;
         this.isJumping = false;
+        this.jumpsAvailable = 2; 
         this.color = color;
         this.isDead = false; 
         this.animFrame = 0;  
         this.animTimer = 0;  
+        this.isInvincible = false; 
+        this.invincibleTimer = 0;
     }
     
     jump() {
-        if (!this.isJumping && !this.isDead) {
+        if (!this.isDead && this.jumpsAvailable > 0) {
             this.vy = JUMP_FORCE;
             this.isJumping = true;
+            this.jumpsAvailable--;
         }
     }
     
     update(floorY) {
         this.vy += GRAVITY;
         this.y += this.vy;
+        
         if (this.y >= floorY) {
             this.y = floorY;
             this.vy = 0;
             this.isJumping = false;
+            this.jumpsAvailable = 2; 
+        }
+
+        if (this.isInvincible) {
+            this.invincibleTimer--;
+            if (this.invincibleTimer <= 0) {
+                this.isInvincible = false;
+            }
         }
 
         if (this.isDead) {
@@ -170,10 +237,15 @@ class Dino {
     }
     
     draw(ctx) {
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = this.color;
-        ctx.fillStyle = this.color;
+        ctx.save();
+        ctx.shadowBlur = this.isInvincible ? 25 : 10;
+        ctx.shadowColor = this.isInvincible ? '#fffb00' : this.color;
+        ctx.fillStyle = this.isInvincible ? '#fffb00' : this.color;
+        
         if (this.isDead) ctx.globalAlpha = 0.4;
+        if (this.isInvincible && this.invincibleTimer < 90 && Math.floor(this.invincibleTimer / 5) % 2 === 0) {
+            ctx.globalAlpha = 0.2;
+        }
 
         const frame = DINO_FRAMES[this.animFrame];
         const rows = frame.length;
@@ -182,7 +254,6 @@ class Dino {
         const pixelH = this.height / rows;
         const startY = this.y - this.height;
 
-        // Pinta o Dino quadrado por quadrado
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
                 if (frame[r][c] !== ' ') {
@@ -195,36 +266,95 @@ class Dino {
                 }
             }
         }
-
-        ctx.globalAlpha = 1.0; 
-        ctx.shadowBlur = 0;
+        ctx.restore();
     }
 }
 
 class Obstacle {
-    constructor(x) {
+    constructor(x, type) {
         this.x = x;
-        this.width = 18;
-        this.height = 32;
+        this.type = type; // 'cactus', 'bird', 'star'
+        this.hasLanded = false; // Controle exclusivo para a Estrela Cadente
+        
+        if (type === 'cactus') {
+            this.width = 18;
+            this.height = 32;
+            this.yOffset = 0;
+        } else if (type === 'bird') {
+            this.width = 26;
+            this.height = 20;
+            this.yOffset = Math.random() > 0.5 ? 25 : 55;
+        } else if (type === 'star') {
+            this.width = 20;
+            this.height = 20;
+            this.yOffset = 140; // Começa bem alto na tela
+        }
+        
+        this.animFrame = 0;
+        this.animTimer = 0;
     }
+    
     update() {
         this.x -= gameSpeed;
-    }
-    draw(ctx, floorY) {
-        ctx.fillStyle = '#ff0055';
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = '#ff0055';
         
-        const rows = CACTUS_FRAME.length;
-        const cols = CACTUS_FRAME[0].length;
+        if (this.type === 'bird') {
+            this.animTimer++;
+            if (this.animTimer > 15) {
+                this.animFrame = this.animFrame === 0 ? 1 : 0;
+                this.animTimer = 0;
+            }
+        }
+        
+        // Mecânica da Estrela Cadente Caindo no Chão
+        if (this.type === 'star' && !this.hasLanded) {
+            // Cai diagonalmente sincronizado à velocidade do jogo
+            this.yOffset -= (gameSpeed * 1.3); 
+            
+            // Se atingir o chão, vira buraco/cratera permanentemente
+            if (this.yOffset <= 0) {
+                this.yOffset = 0;
+                this.hasLanded = true;
+                // Redimensiona o bloco de colisão para ajustar ao formato do buraco
+                this.width = 30;
+                this.height = 12;
+            }
+        }
+    }
+    
+    draw(ctx, floorY) {
+        ctx.save();
+        let frame;
+        
+        if (this.type === 'cactus') {
+            ctx.fillStyle = '#ff0055';
+            ctx.shadowColor = '#ff0055';
+            frame = CACTUS_FRAME;
+        } else if (this.type === 'bird') {
+            ctx.fillStyle = '#00ff9d';
+            ctx.shadowColor = '#00ff9d';
+            frame = BIRD_FRAMES[this.animFrame];
+        } else if (this.type === 'star') {
+            if (!this.hasLanded) {
+                ctx.fillStyle = '#ffdd00'; // Amarelo Neon Estrela caindo
+                ctx.shadowColor = '#ffdd00';
+                frame = STAR_FRAME;
+            } else {
+                ctx.fillStyle = '#9d00ff'; // Roxo Profundo Neon quando vira Buraco
+                ctx.shadowColor = '#9d00ff';
+                frame = CRATER_FRAME;
+            }
+        }
+        
+        ctx.shadowBlur = 12;
+        const rows = frame.length;
+        const cols = frame[0].length;
         const pixelW = this.width / cols;
         const pixelH = this.height / rows;
-        const startY = floorY - this.height;
+        const startY = (floorY - this.height) - this.yOffset;
 
-        // Pinta o Cacto quadrado por quadrado
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
-                if (CACTUS_FRAME[r][c] !== ' ') {
+                if (frame[r][c] !== ' ') {
                     ctx.fillRect(
                         this.x + (c * pixelW), 
                         startY + (r * pixelH), 
@@ -234,18 +364,56 @@ class Obstacle {
                 }
             }
         }
-        
-        ctx.shadowBlur = 0;
+        ctx.restore();
     }
 }
 
-// Criando os personagens com cores Neon (Não precisa mais de URL!)
+class PowerUp {
+    constructor(x, floorY) {
+        this.x = x;
+        this.width = 20;
+        this.height = 20;
+        this.y = floorY - this.height - 40; 
+        this.angle = 0;
+    }
+    update() {
+        this.x -= gameSpeed;
+        this.angle += 0.05; 
+    }
+    draw(ctx) {
+        ctx.save();
+        ctx.fillStyle = '#fffb00';
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#fffb00';
+
+        const rows = SHIELD_FRAME.length;
+        const cols = SHIELD_FRAME[0].length;
+        const pixelW = this.width / cols;
+        const pixelH = this.height / rows;
+        const currentY = this.y + Math.sin(this.angle) * 5;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (SHIELD_FRAME[r][c] !== ' ') {
+                    ctx.fillRect(
+                        this.x + (c * pixelW), 
+                        currentY + (r * pixelH), 
+                        Math.ceil(pixelW), 
+                        Math.ceil(pixelH)
+                    );
+                }
+            }
+        }
+        ctx.restore();
+    }
+}
+
 const myDino = new Dino('#00f2fe'); 
 const oppDino = new Dino('#ff0844');
 
 let backgroundX = 0;
 
-function drawScenery(ctx, floorY) {
+function drawScenery(ctx, floorY, levelColor) {
     ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
     for(let i=1; i<=6; i++) { ctx.fillRect(i * (ctx.canvas.width / 7), 30, 2, 2); }
     backgroundX -= (gameSpeed * 0.05);
@@ -259,12 +427,14 @@ function drawScenery(ctx, floorY) {
         ctx.lineTo(startX + 180, floorY);
         ctx.fill();
     }
-    ctx.strokeStyle = ctx.canvas.id === "myCanvas" ? "#00f2fe" : "#ff0844";
+    
+    ctx.strokeStyle = levelColor;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(0, floorY);
     ctx.lineTo(ctx.canvas.width, floorY);
     ctx.stroke();
+    
     ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
     ctx.lineWidth = 1;
     let numLines = Math.ceil(ctx.canvas.width / 50) + 2;
@@ -411,12 +581,17 @@ document.getElementById('btnJoin').addEventListener('click', () => {
 function initGame() {
     isGameRunning = true;
     obstacles = [];
+    powerUps = [];
     gameSpeed = 4.5; 
     obstacleTimer = 0;
+    powerUpTimer = 0;
     score = 0;
+    level = 1;
 
     myDino.isDead = false;  
     oppDino.isDead = false; 
+    myDino.isInvincible = false;
+    oppDino.isInvincible = false;
 
     myCanvas.width = myCanvas.clientWidth;
     myCanvas.height = myCanvas.clientHeight;
@@ -441,13 +616,15 @@ function triggerJump() {
 document.addEventListener('keydown', (e) => { if (e.code === 'Space') triggerJump(); });
 document.getElementById('btnJump').addEventListener('touchstart', (e) => { e.preventDefault(); triggerJump(); });
 
-function checkCollision(dino, obs, floorY) {
-    // Margem de tolerância ajustada para o novo formato do Dino
+function checkCollision(dino, obj, floorY) {
+    const dinoYStart = dino.y - dino.height;
+    const objYStart = obj.type ? (floorY - obj.height - obj.yOffset) : obj.y;
+
     return (
-        dino.x + 8 < obs.x + obs.width &&
-        dino.x + dino.width - 8 > obs.x &&
-        dino.y - dino.height + 4 < floorY && 
-        dino.y >= floorY - obs.height
+        dino.x + 6 < obj.x + obj.width &&
+        dino.x + dino.width - 6 > obj.x &&
+        dinoYStart + 4 < objYStart + obj.height &&
+        dino.y - 4 > objYStart
     );
 }
 
@@ -496,34 +673,80 @@ function gameLoop() {
     myCtx.imageSmoothingEnabled = false;
     if (!isSoloMode) oppCtx.imageSmoothingEnabled = false;
 
-    gameSpeed += 0.0016; 
+    // Sistema de Níveis e Progressão
     score += 0.1; 
+    level = Math.floor(score / 300) + 1; 
+    gameSpeed = 4.5 + (level * 0.4); 
+
+    let baseHue = (level * 60) % 360;
+    let myColor = `hsl(${baseHue}, 100%, 60%)`;
+    let oppColor = `hsl(${(baseHue + 180) % 360}, 100%, 60%)`;
 
     if (isSoloMode) {
-        document.getElementById('myName').innerText = Math.floor(score);
+        document.getElementById('myName').innerText = `Lvl ${level} - ${Math.floor(score)} pts`;
     }
 
     myCtx.clearRect(0, 0, myCanvas.width, myCanvas.height);
-    drawScenery(myCtx, myFloor);
+    drawScenery(myCtx, myFloor, myColor);
 
     if (!isSoloMode) {
         oppCtx.clearRect(0, 0, oppCanvas.width, oppCanvas.height);
-        drawScenery(oppCtx, oppFloor);
+        drawScenery(oppCtx, oppFloor, oppColor);
         if (!oppDino.isDead) { 
             oppDino.update(oppFloor); 
         }
         oppDino.draw(oppCtx);
     }
 
+    // Gerador Sorteado de Obstáculos (Cacto, Pássaro ou Estrela Cadente)
     obstacleTimer++;
-    if (obstacleTimer > 90) { 
-        obstacles.push(new Obstacle(SPAWN_X)); 
+    if (obstacleTimer > (Math.random() * 40 + 75)) { 
+        let rand = Math.random();
+        let type = 'cactus';
+        
+        if (rand < 0.4) {
+            type = 'cactus';
+        } else if (rand < 0.7) {
+            type = 'bird';
+        } else {
+            type = 'star'; // Sorteia a Estrela Cadente/Buraco
+        }
+        
+        obstacles.push(new Obstacle(SPAWN_X, type)); 
         obstacleTimer = 0;
+    }
+
+    // Gerador de Power-Ups (Escudo de Invencibilidade)
+    powerUpTimer++;
+    if (powerUpTimer > 600) { 
+        if(Math.random() > 0.5) {
+            powerUps.push(new PowerUp(SPAWN_X, myFloor));
+        }
+        powerUpTimer = 0;
     }
 
     myDino.update(myFloor);
     myDino.draw(myCtx);
 
+    // Processamento dos Escudos (Power-ups)
+    for(let j = powerUps.length - 1; j >= 0; j--) {
+        let pUp = powerUps[j];
+        pUp.update();
+        
+        if (pUp.x < myCanvas.width) pUp.draw(myCtx);
+        
+        if (checkCollision(myDino, pUp, myFloor)) {
+            myDino.isInvincible = true;
+            myDino.invincibleTimer = 300; 
+            powerUps.splice(j, 1);
+            continue;
+        }
+        if (pUp.x + pUp.width < 0) {
+            powerUps.splice(j, 1);
+        }
+    }
+
+    // Processamento de Obstáculos Ativos
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.update();
@@ -531,17 +754,24 @@ function gameLoop() {
         if (obs.x < myCanvas.width) obs.draw(myCtx, myFloor);
         if (!isSoloMode && obs.x < oppCanvas.width) obs.draw(oppCtx, oppFloor);
 
+        // Testar colisão direta
         if (checkCollision(myDino, obs, myFloor)) {
-            isGameRunning = false;
-            myDino.isDead = true;
-            
-            if (isSoloMode) {
-                socket.emit('submit_score', { name: 'Solo Player', score: score });
-                showEndScreen(`GAME OVER\n${Math.floor(score)} PONTOS`, "neon-magenta");
+            if (myDino.isInvincible) {
+                // Escudo ativo destrói o obstáculo (ou passa por cima do buraco) sem morrer!
+                obstacles.splice(i, 1);
+                continue;
             } else {
-                socket.emit('game_over', currentRoom); 
+                isGameRunning = false;
+                myDino.isDead = true;
+                
+                if (isSoloMode) {
+                    socket.emit('submit_score', { name: 'Solo Player', score: score });
+                    showEndScreen(`GAME OVER\n${Math.floor(score)} PONTOS`, "neon-magenta");
+                } else {
+                    socket.emit('game_over', currentRoom); 
+                }
+                return;
             }
-            return;
         }
 
         if (obs.x + obs.width < 0) {
