@@ -3,43 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dino Multiplayer</title>
+    <title>Dino Neon Split</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="loginScreen" class="screen">
-        <h1 class="neon-text">DINO RACE</h1>
-        <input type="text" id="playerName" placeholder="Seu Nome" class="neon-input">
-        <button id="btnCreateRoom" class="neon-button">Criar Mundo</button>
-        <br><br>
-        <input type="text" id="roomCodeInput" placeholder="Código do Mundo" class="neon-input">
-        <button id="btnJoinRoom" class="neon-button">Entrar em Mundo</button>
-    </div>
 
-    <div id="waitingScreen" class="screen" style="display: none;">
-        <h2 class="neon-text">Mundo Criado!</h2>
-        <p>Passe este código para seu adversário:</p>
-        <h1 id="displayRoomCode" class="neon-text code-box"></h1>
-        <p>Aguardando jogador...</p>
-        <br>
-        <button onclick="window.location.reload()" class="neon-button small-btn">Cancelar e Voltar</button>
-    </div>
-
-    <div id="gameScreen" class="screen" style="display: none;">
-        <div id="gameBoard">
-            <div id="dino" class="sprite"></div>
-            <div id="obstacle" class="sprite"></div>
+    <div id="login-screen" class="screen active-screen">
+        <h1 class="title">Dino <span class="neon-cyan">Neon</span></h1>
+        <div class="card">
+            <button id="btnSolo" class="btn btn-green">Jogar Modo Solo</button>
+            
+            <div class="divider">OU MULTIPLAYER</div>
+            
+            <input type="text" id="playerName" placeholder="Seu Nickname" autocomplete="off">
+            <button id="btnCreate" class="btn btn-cyan">Criar Mundo</button>
+            <div class="divider">OU</div>
+            <input type="text" id="roomCodeInput" placeholder="Código do Mundo" autocomplete="off">
+            <button id="btnJoin" class="btn btn-magenta">Entrar no Mundo</button>
         </div>
-        <div class="players-info">
-            <span id="p1Name" class="neon-text-small">Você</span> VS <span id="p2Name" class="neon-text-small">Adversário</span>
-        </div>
-        <button id="btnJump" class="neon-button jump-btn">PULAR!</button>
     </div>
 
-    <div id="gameOverScreen" class="screen" style="display: none;">
-        <h1 id="winnerText" class="neon-text">FIM DE JOGO</h1>
-        <br>
-        <button onclick="window.location.reload()" class="neon-button">Jogar Novamente (Menu)</button>
+    <div id="waiting-screen" class="screen" style="display: none;">
+        <h2 class="neon-magenta">Mundo Criado!</h2>
+        <p>Compartilhe o código com seu adversário:</p>
+        <div id="displayRoomCode" class="room-code">------</div>
+        <p class="loading-text">Aguardando jogador entrar...</p>
+        <button onclick="window.location.reload()" class="btn-back">Cancelar e Voltar</button>
+    </div>
+
+    <div id="game-screen" class="screen format-game" style="display: none;">
+        <div id="split-container" class="split-container">
+            <div id="oppWrapper" class="canvas-wrapper border-magenta">
+                <div class="player-tag tag-magenta">Adversário: <span id="oppName">...</span></div>
+                <canvas id="oppCanvas"></canvas>
+            </div>
+            
+            <div id="myWrapper" class="canvas-wrapper border-cyan">
+                <div class="player-tag tag-cyan"><span id="myTagType">Você:</span> <span id="myName">...</span></div>
+                <canvas id="myCanvas"></canvas>
+            </div>
+        </div>
+        
+        <button id="btnJump" class="jump-trigger">PULAR</button>
+    </div>
+
+    <div id="gameover-screen" class="screen" style="display: none;">
+        <h1 id="endGameResult" class="title">FIM DE JOGO</h1>
+        <div class="card grid-gap">
+            <button id="btnRestart" class="btn btn-green">Jogar Novamente</button>
+            <button id="btnMenu" class="btn btn-cyan">Voltar ao Menu</button>
+        </div>
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
