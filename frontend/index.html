@@ -2,56 +2,47 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dino Neon Multiplayer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dino Multiplayer</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Importando o Socket.io do CDN -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
-
-    <!-- TELA DE LOGIN -->
-    <div id="login-screen" class="screen-container">
-        <h1 class="title">Dino Race <span class="neon-text">Online</span></h1>
-        
-        <div class="card">
-            <input type="text" id="playerName" placeholder="Seu Nickname" autocomplete="off">
-            
-            <div class="actions">
-                <button id="btnCreate" class="btn primary">Criar Mundo</button>
-                <div class="divider">OU</div>
-                <input type="text" id="roomCodeInput" placeholder="Código do Mundo" autocomplete="off">
-                <button id="btnJoin" class="btn secondary">Entrar em Mundo</button>
-            </div>
-            
-            <p id="statusMessage"></p>
-        </div>
+    <div id="loginScreen" class="screen">
+        <h1 class="neon-text">DINO RACE</h1>
+        <input type="text" id="playerName" placeholder="Seu Nome" class="neon-input">
+        <button id="btnCreateRoom" class="neon-button">Criar Mundo</button>
+        <br><br>
+        <input type="text" id="roomCodeInput" placeholder="Código do Mundo" class="neon-input">
+        <button id="btnJoinRoom" class="neon-button">Entrar em Mundo</button>
     </div>
 
-    <!-- TELA DO JOGO (Dividida) -->
-    <div id="game-screen" class="screen-container" style="display: none;">
-        <div class="header">
-            <h2>Sala: <span id="displayRoomCode" class="neon-text"></span></h2>
-            <p id="gameStatus">Aguardando adversário...</p>
-        </div>
-
-        <div class="split-view">
-            <!-- Esquerda: Adversário -->
-            <div class="game-board opponent">
-                <h3 class="player-title">Adversário: <span id="oppName">...</span></h3>
-                <canvas id="oppCanvas" width="400" height="200"></canvas>
-            </div>
-            
-            <!-- Direita: Você -->
-            <div class="game-board you">
-                <h3 class="player-title">Você: <span id="myName">...</span></h3>
-                <canvas id="myCanvas" width="400" height="200"></canvas>
-            </div>
-        </div>
-        
-        <p class="controls">Pressione <strong>ESPAÇO</strong> ou toque na sua tela para pular.</p>
+    <div id="waitingScreen" class="screen" style="display: none;">
+        <h2 class="neon-text">Mundo Criado!</h2>
+        <p>Passe este código para seu adversário:</p>
+        <h1 id="displayRoomCode" class="neon-text code-box"></h1>
+        <p>Aguardando jogador...</p>
+        <br>
+        <button onclick="window.location.reload()" class="neon-button small-btn">Cancelar e Voltar</button>
     </div>
 
+    <div id="gameScreen" class="screen" style="display: none;">
+        <div id="gameBoard">
+            <div id="dino" class="sprite"></div>
+            <div id="obstacle" class="sprite"></div>
+        </div>
+        <div class="players-info">
+            <span id="p1Name" class="neon-text-small">Você</span> VS <span id="p2Name" class="neon-text-small">Adversário</span>
+        </div>
+        <button id="btnJump" class="neon-button jump-btn">PULAR!</button>
+    </div>
+
+    <div id="gameOverScreen" class="screen" style="display: none;">
+        <h1 id="winnerText" class="neon-text">FIM DE JOGO</h1>
+        <br>
+        <button onclick="window.location.reload()" class="neon-button">Jogar Novamente (Menu)</button>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="game.js"></script>
 </body>
 </html>

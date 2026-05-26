@@ -1,224 +1,118 @@
-// ATENÇÃO: Troque a URL abaixo para a URL do seu backend quando subir no Render/Railway
-const socket = io('https://dino-multiplayer.onrender.com'); 
+// 🚨 TROQUE A URL ABAIXO PELO SEU LINK DO RENDER!
+const socket = io('https://dino-multiplayer-backend-xyz.onrender.com');
 
-let currentRoom = '';
+// Telas
+const loginScreen = document.getElementById('loginScreen');
+const waitingScreen = document.getElementById('waitingScreen');
+const gameScreen = document.getElementById('gameScreen');
+const gameOverScreen = document.getElementById('gameOverScreen'); // NOVA TELA
+
+// Elementos
+const btnCreateRoom = document.getElementById('btnCreateRoom');
+const btnJoinRoom = document.getElementById('btnJoinRoom');
+const playerNameInput = document.getElementById('playerName');
+const roomCodeInput = document.getElementById('roomCodeInput');
+const displayRoomCode = document.getElementById('displayRoomCode');
+const winnerText = document.getElementById('winnerText');
+
+// Jogo
+const dino = document.getElementById('dino');
+const obstacle = document.getElementById('obstacle');
+const btnJump = document.getElementById('btnJump');
+
+let myRoomCode = '';
 let isGameRunning = false;
-let myName = '';
+let checkCollision;
 
-// Elementos da DOM
-const loginScreen = document.getElementById('login-screen');
-const gameScreen = document.getElementById('game-screen');
-const statusMessage = document.getElementById('statusMessage');
-const gameStatus = document.getElementById('gameStatus');
-
-// Configurações do Jogo
-const GRAVITY = 0.6;
-const JUMP_POWER = -10;
-const GAME_SPEED = 5;
-
-class Dino {
-    constructor(color) {
-        this.x = 50;
-        this.y = 150;
-        this.width = 30;
-        this.height = 30;
-        this.vy = 0;
-        this.isJumping = false;
-        this.color = color;
-    }
-    jump() {
-        if (!this.isJumping) {
-            this.vy = JUMP_POWER;
-            this.isJumping = true;
-        }
-    }
-    update() {
-        this.vy += GRAVITY;
-        this.y += this.vy;
-        if (this.y >= 150) { // Chão
-            this.y = 150;
-            this.vy = 0;
-            this.isJumping = false;
-        }
-    }
-    draw(ctx) {
-        ctx.fillStyle = this.color;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-        ctx.shadowBlur = 0; // reseta
-    }
-}
-
-class Obstacle {
-    constructor() {
-        this.x = 400;
-        this.y = 150;
-        this.width = 20;
-        this.height = 30;
-    }
-    update() { this.x -= GAME_SPEED; }
-    draw(ctx) {
-        ctx.fillStyle = '#ffb199';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#ff0844';
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-        ctx.shadowBlur = 0;
-    }
-}
-
-// Instanciando os jogadores
-const myDino = new Dino('#00f2fe');
-const oppDino = new Dino('#ff0844');
-
-const myCanvas = document.getElementById('myCanvas');
-const myCtx = myCanvas.getContext('2d');
-const oppCanvas = document.getElementById('oppCanvas');
-const oppCtx = oppCanvas.getContext('2d');
-
-let obstacles = [];
-let frameCount = 0;
-
-// --- LÓGICA DE SOCKETS (Rede) ---
-
-document.getElementById('btnCreate').addEventListener('click', () => {
-    myName = document.getElementById('playerName').value || 'Jogador 1';
-    socket.emit('create_room', { name: myName });
-});
-
-document.getElementById('btnJoin').addEventListener('click', () => {
-    myName = document.getElementById('playerName').value || 'Jogador 2';
-    const roomCode = document.getElementById('roomCodeInput').value.toUpperCase();
-    if (roomCode) socket.emit('join_room', { name: myName, roomCode });
+// --- LÓGICA DE SALAS ---
+btnCreateRoom.addEventListener('click', () => {
+    const name = playerNameInput.value || 'Jogador 1';
+    socket.emit('create_room', { name });
 });
 
 socket.on('room_created', (roomCode) => {
-    currentRoom = roomCode;
-    showGameScreen(roomCode);
-    document.getElementById('myName').innerText = myName;
-    gameStatus.innerText = 'Envie o código para seu adversário!';
-});
-
-socket.on('start_game', (players) => {
-    // Descobrir quem é quem
-    const opp = players.player1.id === socket.id ? players.player2 : players.player1;
-    document.getElementById('oppName').innerText = opp.name;
-    
-    if(!currentRoom) { // Se eu for o jogador 2 entrando agora
-        currentRoom = document.getElementById('roomCodeInput').value.toUpperCase();
-        showGameScreen(currentRoom);
-        document.getElementById('myName').innerText = myName;
-    }
-
-    gameStatus.innerText = 'PREPARE-SE! O jogo vai começar...';
-    setTimeout(startGame, 3000); // 3 segundos para começar
-});
-
-socket.on('opponent_jump', () => {
-    oppDino.jump();
-});
-
-socket.on('you_win', () => {
-    isGameRunning = false;
-    gameStatus.innerText = "🏆 VOCÊ VENCEU! O adversário bateu.";
-    gameStatus.style.color = "#00f2fe";
-});
-
-socket.on('error', (msg) => statusMessage.innerText = msg);
-
-// --- LÓGICA DO JOGO ---
-
-function showGameScreen(room) {
+    myRoomCode = roomCode;
     loginScreen.style.display = 'none';
+    waitingScreen.style.display = 'block';
+    displayRoomCode.innerText = roomCode;
+});
+
+btnJoinRoom.addEventListener('click', () => {
+    const name = playerNameInput.value || 'Jogador 2';
+    const code = roomCodeInput.value.toUpperCase();
+    if(code) {
+        myRoomCode = code;
+        socket.emit('join_room', { name, roomCode: code });
+    }
+});
+
+socket.on('error', (msg) => {
+    alert(msg);
+});
+
+// --- INÍCIO DO JOGO ---
+socket.on('start_game', (players) => {
+    loginScreen.style.display = 'none';
+    waitingScreen.style.display = 'none';
     gameScreen.style.display = 'block';
-    document.getElementById('displayRoomCode').innerText = room;
-}
+    
+    document.getElementById('p1Name').innerText = players.player1.name;
+    document.getElementById('p2Name').innerText = players.player2.name;
+
+    startGame();
+});
 
 function startGame() {
     isGameRunning = true;
-    obstacles = [];
-    gameStatus.innerText = "CORRA!";
-    gameStatus.style.color = "white";
-    gameLoop();
-}
+    obstacle.style.display = 'block';
+    obstacle.classList.add('obs-move');
 
-// Controles
-document.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' && isGameRunning) {
-        myDino.jump();
-        socket.emit('jump', currentRoom);
-    }
-});
-// Suporte Mobile (Toque na tela)
-document.addEventListener('touchstart', (e) => {
-    if (isGameRunning) {
-        myDino.jump();
-        socket.emit('jump', currentRoom);
-    }
-});
+    checkCollision = setInterval(() => {
+        const dinoTop = parseInt(window.getComputedStyle(dino).getPropertyValue('bottom'));
+        const obsLeft = parseInt(window.getComputedStyle(obstacle).getPropertyValue('left'));
 
-function checkCollision(dino, obs) {
-    return (
-        dino.x < obs.x + obs.width &&
-        dino.x + dino.width > obs.x &&
-        dino.y < obs.y + obs.height &&
-        dino.y + dino.height > obs.y
-    );
-}
-
-function drawBackground(ctx) {
-    ctx.clearRect(0, 0, 400, 200);
-    // Linha do chão
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, 180);
-    ctx.lineTo(400, 180);
-    ctx.stroke();
-}
-
-function gameLoop() {
-    if (!isGameRunning) return;
-
-    drawBackground(myCtx);
-    drawBackground(oppCtx);
-
-    // Gerar obstáculos sincronizados (baseado em frames)
-    frameCount++;
-    if (frameCount % 100 === 0) {
-        obstacles.push(new Obstacle());
-    }
-
-    // Atualizar Seu Dino
-    myDino.update();
-    myDino.draw(myCtx);
-
-    // Atualizar Dino Inimigo
-    oppDino.update();
-    oppDino.draw(oppCtx);
-
-    // Atualizar Obstáculos
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-        let obs = obstacles[i];
-        obs.update();
-        
-        // Desenha o obstáculo nas duas telas
-        obs.draw(myCtx);
-        obs.draw(oppCtx);
-
-        // Verifica sua colisão
-        if (checkCollision(myDino, obs)) {
-            isGameRunning = false;
-            gameStatus.innerText = "💥 VOCÊ PERDEU!";
-            gameStatus.style.color = "#ff0844";
-            socket.emit('game_over', currentRoom);
+        if (obsLeft > 0 && obsLeft < 50 && dinoTop <= 30) {
+            // Se você bater no bloco vermelho:
+            gameOver("Você Bateu! 💥");
+            socket.emit('game_over', myRoomCode);
         }
+    }, 10);
+}
 
-        // Remove obstáculo que passou da tela
-        if (obs.x + obs.width < 0) {
-            obstacles.splice(i, 1);
-        }
+// --- PULO ---
+function jump() {
+    if (dino.classList != 'jump' && isGameRunning) {
+        dino.classList.add('jump');
+        socket.emit('jump', myRoomCode);
+        setTimeout(() => {
+            dino.classList.remove('jump');
+        }, 500);
     }
+}
 
-    requestAnimationFrame(gameLoop);
+// O touchstart ajuda a responder mais rápido no celular e ignora zoom
+btnJump.addEventListener('touchstart', (e) => {
+    e.preventDefault(); 
+    jump();
+});
+btnJump.addEventListener('click', jump);
+
+socket.on('opponent_jump', () => {
+    // Aqui poderiamos animar o pulo do adversário se quiséssemos ver os dois Dinos
+});
+
+// --- FIM DE JOGO ---
+socket.on('you_win', () => {
+    gameOver("VOCÊ VENCEU! 🏆");
+});
+
+function gameOver(message) {
+    isGameRunning = false;
+    clearInterval(checkCollision);
+    obstacle.classList.remove('obs-move');
+    
+    // Troca a tela para o Fim de Jogo
+    gameScreen.style.display = 'none';
+    gameOverScreen.style.display = 'block';
+    winnerText.innerText = message;
 }
